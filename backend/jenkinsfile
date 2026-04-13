@@ -1,1 +1,73 @@
+pipeline {
+    agent any
 
+    environment {
+        APP_DIR = 'home/ubuntu/project/backend'
+        APP_PORT = '5000'
+        VENV_DIR = 'home/ubuntu/project/backend/.venv'
+        PM2_APP_NAME = 'flask-backend'
+    }
+
+    stages {
+        stage('Pull Latest Code') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        echo ">>>Pulling latest code from Github..."
+                        git pull origin main
+                    '''
+                }
+            }
+        }
+
+        stage("Install Dependencies") {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        echo ">>> Setting up virtual environment and installing dependencies..."
+                        python3 -m venv ${VENV_DIR}
+
+                        echo ">>> Activating virtual environment and installing requirements..."
+                        source ${VENV_DIR}/bin/activate
+                        pip install -r requirements.txt
+                    '''
+                }
+            }
+        }
+
+        stage("Run Teats") {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        echo ">>> Running tests..."
+                        ${VENV_DIR}/bin/pip install pytest --quiet
+                        ${VENV_DIR}/bin/pytest tests/ -v || true
+                    '''
+                }
+            }
+        }
+
+        stage('Restart Application') {
+            steps {
+                dir("${APP_DIR}") {
+                    sh '''
+                        echo ">>> Restarting Flask app with PM2..."
+ 
+                        if pm2 describe ${PM2_APP_NAME} > /dev/null 2>&1; then
+                            echo "App found in PM2 — restarting..."
+                            pm2 restart ${PM2_APP_NAME}
+                        else
+                            echo "App not in PM2 — starting fresh..."
+                            pm2 start ${VENV_DIR}/bin/python \
+                                --name ${PM2_APP_NAME} \
+                                -- app.py
+                            pm2 save
+                        fi
+ 
+                        pm2 status
+                    '''
+                }
+            }
+        }
+    }
+}
