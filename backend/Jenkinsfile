@@ -2,69 +2,66 @@ pipeline {
     agent any
 
     environment {
-        APP_DIR = 'home/ubuntu/project/backend'
-        APP_PORT = '5000'
-        VENV_DIR = 'home/ubuntu/project/backend/.venv'
+        APP_DIR      = '/home/ubuntu/project/backend'
+        VENV_DIR     = '/home/ubuntu/project/backend/.venv'
         PM2_APP_NAME = 'flask-backend'
-        PATH = "/home/ubuntu/.nvm/versions/node/v24.14.1/bin:${env.PATH}"
+        PATH         = "/home/ubuntu/.nvm/versions/node/v24.14.1/bin:${env.PATH}"
     }
 
     stages {
+
         stage('Pull Latest Code') {
             steps {
-                dir("${APP_DIR}") {
-                    sh '''
-                        echo ">>>Pulling latest code from Github..."
-                        git pull origin main
-                    '''
-                }
+                sh '''
+                    cd /home/ubuntu/project/backend
+                    git pull origin main
+                '''
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                dir("${WORKSPACE}/backend") {
-                    sh '''
-                        echo ">>> Setting up virtual environment..."
-                        python3 -m venv ${VENV_DIR}
-        
-                        echo ">>> Installing dependencies..."
-                        ${VENV_DIR}/bin/pip install --upgrade pip
-                        ${VENV_DIR}/bin/pip install -r requirements.txt
-                    '''
-                }
+                sh '''
+                    python3 -m venv /home/ubuntu/project/backend/.venv
+                    /home/ubuntu/project/backend/.venv/bin/pip install --upgrade pip
+                    /home/ubuntu/project/backend/.venv/bin/pip install -r /home/ubuntu/project/backend/requirements.txt
+                '''
             }
         }
 
-        stage("Run Teats") {
+        stage('Run Tests') {
             steps {
-                dir("${APP_DIR}") {
-                    sh '''
-                        echo ">>> Running tests..."
-                        ${VENV_DIR}/bin/pip install pytest --quiet
-                        ${VENV_DIR}/bin/pytest tests/ -v || true
-                    '''
-                }
+                sh '''
+                    /home/ubuntu/project/backend/.venv/bin/pip install pytest --quiet
+                    /home/ubuntu/project/backend/.venv/bin/pytest /home/ubuntu/project/backend/tests/ -v || true
+                '''
             }
         }
 
         stage('Restart Application') {
             steps {
                 sh '''
-                    echo ">>> Restarting Flask app with PM2..."
-        
                     if pm2 describe ${PM2_APP_NAME} > /dev/null 2>&1; then
                         pm2 delete ${PM2_APP_NAME}
                     fi
-        
+
                     pm2 start /home/ubuntu/project/backend/app.py \
                         --name ${PM2_APP_NAME} \
                         --interpreter /home/ubuntu/project/backend/.venv/bin/python
-        
+
                     pm2 save
                     pm2 status
                 '''
             }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Flask backend deployed successfully!'
+        }
+        failure {
+            echo '❌ Flask backend deployment FAILED.'
         }
     }
 }
