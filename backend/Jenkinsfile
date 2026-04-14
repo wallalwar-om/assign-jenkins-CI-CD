@@ -6,6 +6,7 @@ pipeline {
         APP_PORT = '5000'
         VENV_DIR = 'home/ubuntu/project/backend/.venv'
         PM2_APP_NAME = 'flask-backend'
+        PATH = "/home/ubuntu/.nvm/versions/node/v24.14.1/bin:${env.PATH}"
     }
 
     stages {
@@ -52,8 +53,6 @@ pipeline {
                 dir("${APP_DIR}") {
                     sh '''
                         echo ">>> Restarting Flask app with PM2..."
-
-                        PM2=/home/ubuntu/.nvm/versions/node/v24.14.1/bin/pm2
  
                         if pm2 describe ${PM2_APP_NAME} > /dev/null 2>&1; then
                             echo "App found in PM2 — restarting..."
