@@ -1,81 +1,52 @@
 pipeline {
     agent any
-
     environment {
+        PATH         = "/home/ubuntu/.nvm/versions/node/v24.14.1/bin:${env.PATH}"
         APP_DIR      = '/home/ubuntu/project/frontend'
         APP_PORT     = '3000'
         PM2_APP_NAME = 'express-frontend'
     }
-
     stages {
-
         stage('Pull Latest Code') {
             steps {
-                dir("${APP_DIR}") {
-                    sh '''
-                        echo ">>> Pulling latest code from Git..."
-                        git pull origin main
-                    '''
-                }
+                sh 'git -C /home/ubuntu/project pull origin main'
             }
         }
-
         stage('Install Dependencies') {
             steps {
-                dir("${APP_DIR}") {
-                    sh '''
-                        echo ">>> Installing Node.js dependencies..."
-                        npm install
-                    '''
-                }
+                sh '''
+                    echo ">>> Installing Node.js dependencies..."
+                    npm install --prefix /home/ubuntu/project/frontend
+                '''
             }
         }
-
         stage('Run Tests') {
             steps {
-                dir("${APP_DIR}") {
-                    sh '''
-                        echo ">>> Running tests..."
-                        if grep -q '"test"' package.json; then
-                            npm test -- --forceExit || true
-                        else
-                            echo "No test script defined in package.json — skipping."
-                        fi
-                    '''
-                }
+                sh '''
+                    echo ">>> Running tests..."
+                    if grep -q '"test"' /home/ubuntu/project/frontend/package.json; then
+                        npm test --prefix /home/ubuntu/project/frontend -- --forceExit || true
+                    else
+                        echo "No test script defined in package.json — skipping."
+                    fi
+                '''
             }
         }
-
-        // ── 4. RESTART WITH PM2 ───────────────────────────────────────────────
         stage('Restart Application') {
             steps {
-                dir("${APP_DIR}") {
-                    sh '''
-                        echo ">>> Restarting Express app with PM2..."
-
-                        if pm2 describe ${PM2_APP_NAME} > /dev/null 2>&1; then
-                            echo "App found in PM2 — restarting..."
-                            pm2 restart ${PM2_APP_NAME}
-                        else
-                            echo "App not in PM2 — starting fresh..."
-                            pm2 start app.js --name ${PM2_APP_NAME}
-                            pm2 save
-                        fi
-
-                        pm2 status
-                    '''
-                }
+                sh '''
+                    sudo -u ubuntu bash -c "
+                        cd /home/ubuntu/project/frontend &&
+                        pm2 delete ${PM2_APP_NAME} || true &&
+                        pm2 start app.js --name ${PM2_APP_NAME} &&
+                        pm2 save
+                    "
+                '''
             }
         }
-
     }
-
     post {
-        success {
-            echo '✅ Express frontend deployed successfully!'
-        }
-        failure {
-            echo '❌ Express frontend deployment FAILED. Check the logs above.'
-        }
+        success { echo '✅ Express frontend deployed successfully!' }
+        failure { echo '❌ Express frontend deployment FAILED.' }
     }
 }
