@@ -33,17 +33,17 @@ pipeline {
         }
 
         stage('Restart Application') {
-            steps {
-                sh '''
-                    pm2 delete flask-backend || true
-                    pm2 start /home/ubuntu/project/backend/app.py \
-                        --name flask-backend \
-                        --interpreter /home/ubuntu/project/backend/.venv/bin/python
-                    pm2 save
-                    pm2 status
-                '''
-            }
-        }
+    steps {
+        sh '''
+            sudo -u ubuntu bash -c "
+                cd /home/ubuntu/project/backend &&
+                pm2 delete flask-backend || true &&
+                pm2 start app.py --name flask-backend --interpreter /home/ubuntu/project/backend/.venv/bin/python &&
+                pm2 save
+            "
+        '''
+    }
+}
     }
 
     post {
