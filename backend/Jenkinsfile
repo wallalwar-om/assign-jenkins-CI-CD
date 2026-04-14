@@ -53,18 +53,16 @@ pipeline {
                 dir("${APP_DIR}") {
                     sh '''
                         echo ">>> Restarting Flask app with PM2..."
- 
+
                         if pm2 describe ${PM2_APP_NAME} > /dev/null 2>&1; then
-                            echo "App found in PM2 — restarting..."
-                            pm2 restart ${PM2_APP_NAME}
-                        else
-                            echo "App not in PM2 — starting fresh..."
-                            pm2 start ${VENV_DIR}/bin/python \
-                                --name ${PM2_APP_NAME} \
-                                -- app.py
-                            pm2 save
+                            pm2 delete ${PM2_APP_NAME}
                         fi
- 
+                        
+                        echo "App not in PM2 — starting fresh..."
+                        pm2 start ${VENV_DIR}/bin/python \
+                            --name ${PM2_APP_NAME} \
+                            -- /home/ubuntu/project/backend/app.py
+                        pm2 save
                         pm2 status
                     '''
                 }
