@@ -50,8 +50,7 @@ pipeline {
 
         stage('Restart Application') {
             steps {
-                dir("${APP_DIR}") {
-                    sh '''
+                sh '''
                         echo ">>> Restarting Flask app with PM2..."
 
                         if pm2 describe ${PM2_APP_NAME} > /dev/null 2>&1; then
@@ -65,7 +64,6 @@ pipeline {
                         pm2 save
                         pm2 status
                     '''
-                }
             }
         }
     }
