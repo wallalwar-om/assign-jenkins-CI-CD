@@ -2,20 +2,14 @@ pipeline {
     agent any
 
     environment {
-        APP_DIR      = '/home/ubuntu/project/backend'
-        VENV_DIR     = '/home/ubuntu/project/backend/.venv'
-        PM2_APP_NAME = 'flask-backend'
-        PATH         = "/home/ubuntu/.nvm/versions/node/v24.14.1/bin:${env.PATH}"
+        PATH = "/home/ubuntu/.nvm/versions/node/v24.14.1/bin:${env.PATH}"
     }
 
     stages {
 
         stage('Pull Latest Code') {
             steps {
-                sh '''
-                    cd /home/ubuntu/project/backend
-                    git pull origin main
-                '''
+                sh 'git -C /home/ubuntu/project pull origin main'
             }
         }
 
@@ -41,14 +35,10 @@ pipeline {
         stage('Restart Application') {
             steps {
                 sh '''
-                    if pm2 describe ${PM2_APP_NAME} > /dev/null 2>&1; then
-                        pm2 delete ${PM2_APP_NAME}
-                    fi
-
+                    pm2 delete flask-backend || true
                     pm2 start /home/ubuntu/project/backend/app.py \
-                        --name ${PM2_APP_NAME} \
+                        --name flask-backend \
                         --interpreter /home/ubuntu/project/backend/.venv/bin/python
-
                     pm2 save
                     pm2 status
                 '''
@@ -57,11 +47,7 @@ pipeline {
     }
 
     post {
-        success {
-            echo '✅ Flask backend deployed successfully!'
-        }
-        failure {
-            echo '❌ Flask backend deployment FAILED.'
-        }
+        success { echo '✅ Flask backend deployed successfully!' }
+        failure { echo '❌ Flask backend deployment FAILED.' }
     }
 }
